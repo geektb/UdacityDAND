@@ -1,0 +1,619 @@
+Exploration of White Wine Quality by Ady Oren  
+========================================================  
+This project explores which chemical properties influence the quality of white wines using approximately 4900 data points. This data set is related to white variants of the Portuguese "Vinho Verde" wine. For more details, consult: http://www.vinhoverde.pt/en/ or the reference [Cortez et al., 2009].  
+<br>  
+Throughout this project, we will be making comparisons between the various collected variables and between quality and those variables, in an effort to identify which components have a strong relationship with the quality rating assigned.
+
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+```
+```{r packages}
+# Load all of the packages that you end up using
+# in your analysis in this code chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk.
+# This prevents the code from displaying in the knitted HTML output.
+# You should set echo=FALSE for all code chunks in your file.
+
+library(knitr)
+library(ggplot2)
+library(ggthemes)
+theme_set(theme_minimal(10))
+library(gridExtra)
+library(dplyr)
+library(tidyr)
+library(alr3)
+library(reshape2)
+library(GGally)
+library(scales)
+library(memisc)
+library(lattice)
+library(MASS)
+library(car)
+library(reshape)
+library(RColorBrewer)
+library(bitops)
+library(RCurl)
+```
+
+```{r Load_the_Data}
+# Load the Data
+setwd("~/Google Drive/School/C751 - Data Analysis with R/P4/")
+wqw <- read.csv('wineQualityWhites.csv')
+
+```
+<br>  
+
+# Univariate Plots and Analysis 
+##### This data set contains 4,898 white wines with 11 variables on quantifying the chemical properties of each wine. At least 3 wine experts rated the quality of each wine, providing a rating between 0 (very bad) and 10 (very excellent).  
+<br>
+```{r Univariate_Plots}
+dim(wqw)
+str(wqw)
+```
+<br>
+
+### Data visualization of counts of the various variables.  
+<br>
+```{r}
+qplot(data = wqw, x = wqw$quality, binwidth=1, 
+      color = I('#555555'), fill = I('#5499C7'), 
+      xlab = 'Quality', ylab = ' Sample Count') +
+  ggtitle('Distribution of Quality Rating of Collected Samples') +
+  scale_x_continuous(limits = c(3, 9), breaks = seq(3, 9, 1))
+```
+<br>
+
+```{r}
+summary(wqw$quality)
+```
+<br>
+
+```{r}
+qplot(data = wqw, x = wqw$alcohol, binwidth=0.1, 
+      color = I('#bbbbbb'), fill = I('#154360'), 
+      xlab = 'Alcohol', ylab = 'Count') +
+  ggtitle('Distribution of % Alcohol Contents of the Wine in Collected Samples')
+```
+<br>
+
+```{r}
+summary(wqw$alcohol)
+```
+<br>
+
+### Lets investigate acidity contents:  
+Please note that the bottom and top 1% data points for each of the plots below have been removed to get a more normalized distribution and exclude outliers.  
+  
+* **Fixed Acidity:** most acids involved with wine or fixed or nonvolatile (do not evaporate readily)  
+* **Volatile Acidity:** the amount of acetic acid in wine, which at too high of levels can lead to an unpleasant, vinegar taste  
+* **Citric Acid:** found in small quantities, citric acid can add 'freshness' and flavor to wines  
+* **pH:** describes how acidic or basic a wine is on a scale from 0 (very acidic) to 14 (very basic); most wines are between 3-4 on the pH scale  
+<br>
+
+```{r}
+acid1 <- qplot(data = wqw, x = wqw$fixed.acidity, binwidth=0.1, 
+      color = I('#555555'), fill = I('#F79420'), 
+      xlab = 'Fixed Acidity', ylab = 'Sample Count') +
+  xlim(quantile(wqw$fixed.acidity, 0.01), 
+       quantile(wqw$fixed.acidity, 0.99)) +
+  ggtitle('Distribution of Fixed Acidity Contents in Collected Samples')
+
+acid2 <- qplot(data = wqw, x = wqw$volatile.acidity, binwidth=0.01, 
+      color = I('#555555'), fill = I('#F79420'), 
+      xlab = 'Volatile Acidity', ylab = 'Sample Count') +
+  xlim(quantile(wqw$volatile.acidity, 0.01), 
+       quantile(wqw$volatile.acidity, 0.99)) +
+  ggtitle('Distribution of Volatile Acidity Contents in Collected Samples')
+
+acid3 <- qplot(data = wqw, x = wqw$citric.acid, binwidth=0.01, 
+      color = I('#555555'), fill = I('#F79420'), 
+      xlab = 'Citric Acid', ylab = 'Sample Count') +
+  xlim(quantile(wqw$citric.acid, 0.01), 
+       quantile(wqw$citric.acid, 0.99)) +
+  ggtitle('Distribution of Citric Acid Contents in Collected Samples')
+
+acid4 <- qplot(data = wqw, x = wqw$pH, binwidth=0.01, 
+      color = I('#555555'), fill = I('#F79420'), 
+      xlab = 'pH', ylab = 'Sample Count') +
+  xlim(quantile(wqw$pH, 0.01), 
+       quantile(wqw$pH, 0.99)) +
+  ggtitle('Distribution of pH Contents in Collected Samples')
+
+grid.arrange(acid1, acid2, acid3, acid4, ncol=1)
+```
+<br>
+
+```{r}
+summary(subset(wqw, select = c('fixed.acidity', 
+                               'volatile.acidity', 
+                               'citric.acid', 
+                               'pH')))
+```
+<br>
+
+### What about sulfur contents?  
+* **Free Sulfur Dioxide:** the free form of SO2 exists in equilibrium between molecular SO2 (as a dissolved gas) and bisulfite ion; it prevents microbial growth and the oxidation of wine  
+* **Total Sulfur Dioxide:** amount of free and bound forms of S02; in low concentrations, SO2 is mostly undetectable in wine, but at free SO2 concentrations over 50 ppm, SO2 becomes evident in the nose and taste of wine  
+* **Sulphates:** a wine additive which can contribute to sulfur dioxide gas (S02) levels, which acts as an antimicrobial and antioxidant  
+<br> 
+
+```{r}
+sulfur1 <- qplot(data = wqw, x = wqw$free.sulfur.dioxide, binwidth=1, 
+      color = I('#555555'), fill = I('#5760AB'), 
+      xlab = 'Free Sulfur Dioxide', ylab = 'Sample Count') +
+  xlim(quantile(wqw$free.sulfur.dioxide, 0.01), 
+       quantile(wqw$free.sulfur.dioxide, 0.99)) +
+  ggtitle('Distribution of Free Sulfur Dioxide Contents in Collected Samples')
+
+sulfur2 <- qplot(data = wqw, x = wqw$total.sulfur.dioxide, binwidth=5, 
+      color = I('#555555'), fill = I('#5760AB'), 
+      xlab = 'Total Sulfur Dioxide', ylab = 'Sample Count') +
+  xlim(quantile(wqw$total.sulfur.dioxide, 0.01), 
+       quantile(wqw$total.sulfur.dioxide, 0.99)) +
+  ggtitle('Distribution of Total Sulfur Dioxide Contents in Collected Samples')
+
+sulfur3 <- qplot(data = wqw, x = wqw$sulphates, binwidth=0.01, 
+      color = I('#555555'), fill = I('#5760AB'), 
+      xlab = 'Sulphates', ylab = 'Sample Count') +
+  xlim(quantile(wqw$sulphates, 0.01), 
+       quantile(wqw$sulphates, 0.99)) +
+  ggtitle('Distribution of pH Sulphates Contents in Collected Samples')
+
+grid.arrange(sulfur1, sulfur2, sulfur3, ncol=1)
+```
+<br>
+
+```{r}
+summary(subset(wqw, select = c('free.sulfur.dioxide', 
+                               'total.sulfur.dioxide', 
+                               'sulphates')))
+```
+<br>
+
+### Additional Variables:  
+* **Residual Sugar:** the amount of sugar remaining after fermentation stops, it's rare to find wines with less than 1 gram/liter and wines with greater than 45 grams/liter are considered sweet  
+* **Chlorides:** the amount of salt in the wine  
+* **Density:** the density of water is close to that of water depending on the percent alcohol and sugar content  
+<br>
+
+```{r}
+random1 <- qplot(data = wqw, x = wqw$residual.sugar, binwidth=0.1, 
+      color = I('#555555'), fill = I('#28B463'), 
+      xlab = 'Residual Sugar', ylab = 'Sample Count') +
+  xlim(quantile(wqw$residual.sugar, 0.01), 
+       quantile(wqw$residual.sugar, 0.99)) +
+  ggtitle('Distribution of Residual Sugar Contents in Collected Samples')
+
+random2 <- qplot(data = wqw, x = wqw$chlorides, binwidth=0.001, 
+      color = I('#555555'), fill = I('#28B463'), 
+      xlab = 'Chlorides', ylab = 'Sample Count') +
+  xlim(quantile(wqw$chlorides, 0.01), 
+       quantile(wqw$chlorides, 0.99)) +
+  ggtitle('Distribution of Chlorides Contents in Collected Samples')
+
+random3 <- qplot(data = wqw, x = wqw$density, binwidth=0.0001, 
+      color = I('#555555'), fill = I('#28B463'), 
+      xlab = 'Density', ylab = 'Sample Count') +
+  xlim(quantile(wqw$density, 0.01), 
+       quantile(wqw$density, 0.99)) +
+  ggtitle('Distribution of Density in Collected Samples')
+
+grid.arrange(random1, random2, random3, ncol=1)
+
+summary(subset(wqw, select = c('residual.sugar', 
+                               'chlorides', 
+                               'density')))
+```
+<br>
+
+### Next, lets look at the ratios between some of the variables  
+<br>
+
+```{r}
+wqw$sugar_alcohol.ratio = wqw$alcohol / wqw$residual.sugar
+wqw$free_total_sulfor.ratio = wqw$total.sulfur.dioxide/ wqw$free.sulfur.dioxide
+wqw$fixed_volatile_acidity.ratio = wqw$fixed.acidity / wqw$volatile.acidity
+```
+
+```{r}
+ratio1 <- qplot(data = wqw, x = wqw$sugar_alcohol.ratio, binwidth=0.1, 
+      color = I('#555555'), fill = I('#CB4335'), 
+      xlab = 'Alcohol / Risidual Sugar Ratio', ylab = 'Sample Count') +
+  xlim(quantile(wqw$sugar_alcohol.ratio, 0.01), 
+       quantile(wqw$sugar_alcohol.ratio, 0.99)) +
+  ggtitle('Ratio Distribution of Alcohol and Risidual Sugar Contents')
+
+ratio2 <- qplot(data = wqw, x = wqw$free_total_sulfor.ratio, binwidth=0.1, 
+      color = I('#555555'), fill = I('#CB4335'), 
+      xlab = 'Free / Total Sulfur Dioxide Ratio', ylab = 'Sample Count') +
+  xlim(quantile(wqw$free_total_sulfor.ratio, 0.01), 
+       quantile(wqw$free_total_sulfor.ratio, 0.99)) +
+  ggtitle('Ratio Distribution of Free and Total Sulfur Dioxide Contents')
+
+ratio3 <- qplot(data = wqw, x = wqw$fixed_volatile_acidity.ratio, binwidth=0.5, 
+      color = I('#555555'), fill = I('#CB4335'), 
+      xlab = 'Fixed / Volatile Acidity Ratio', ylab = 'Sample Count') +
+  xlim(quantile(wqw$fixed_volatile_acidity.ratio, 0.01), 
+       quantile(wqw$fixed_volatile_acidity.ratio, 0.99)) +
+  ggtitle('Ratio Distribution of Fixed and Volatile Acidity Contents')
+
+grid.arrange(ratio1, ratio2, ratio3, ncol=1)
+
+summary(subset(wqw, select = c('sugar_alcohol.ratio', 
+                               'free_total_sulfor.ratio', 
+                               'fixed_volatile_acidity.ratio')))
+```
+
+### What is the structure of your dataset?
+This is a tidy data set that follows a wide format. Each sample is represented by a single line that contains 11 variables containing values of fixed acidity, volatile acidity, citric acid, residual sugar, chlorides, free sulfur dioxide, total sulfur dioxide, density, pH, sulphates, alcohol, and quality.
+
+
+### What are the main features of interest in your dataset?
+Per the data set instructions, I am attempting to identify which chemical properties influence the quality of white wines.
+
+### What other features in the dataset do you think will help support your investigation into your features of interest?
+It would have been interesting to see the actual grading of each individual sample by each taster instead of an average quality score. Visibility to that data may have provided some insight into individual preferences among the tasters. Also, per the information provided with this data set, there is no data about grape types, wine brand or wine selling price due to privacy and logistical issues.
+
+### Did you create any new variables from existing variables in the dataset?
+I was interested to see the distribution of the ratio of residual sugar to alcohol contents and created a new variable for that value. I also created new variables for the rations between Free and Total Sulfur Dioxide, and Fixed Acidity and Volatile Acidity.
+
+### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?  
+I'm not a chemist, or a wine drinker for that matter, so I didn't have any expectations as to what the distributions would look like prior to creating the plots. That being said, I wasn't surprised to find that the majority of the values created a fairly consistent bell curve once the outliers were removed. 
+<br>  
+
+# Bivariate Plots Section and Analysis
+<br>
+
+### First, lets take a look at the corrolation between the variables.
+```{r Bivariate_Plots}
+thecor <- round(cor(wqw[,sort(c("fixed.acidity", "volatile.acidity", 
+                                "citric.acid", "residual.sugar", 
+                                "chlorides", "free.sulfur.dioxide", 
+                                "total.sulfur.dioxide", "density", 
+                                "pH", "sulphates", "alcohol"))],
+                    method="pearson", use="pairwise.complete.obs"),3)
+
+thecor[lower.tri(thecor)] <- NA
+
+thecor <- melt(thecor)
+thecor$X1 <- as.character(thecor$X1)
+thecor$X2 <- as.character(thecor$X2)
+thecor <- na.omit(thecor)
+head(thecor)
+
+ggplot(thecor, aes(X2, X1))+
+ geom_tile(data=thecor, aes(fill=value), color="white")+
+ scale_fill_gradient2(low="#943126", high="#1A5276", mid="white", 
+  midpoint=0, limit=c(-1,1),name="Correlation")+
+ theme(axis.text.x = element_text(angle=90, vjust=1, hjust=1))+
+ coord_equal()
+```
+
+<br>  
+
+**Three variables that stand out is the positive correlation between density and suger (r = 0.839), and the negative correlation between alcohol and density (r = -0.780).** As a reminder, these three variables are described as:
+
+* **Alcohol:** The percent alcohol content of the wine
+* **Residual Sugar:** The amount of sugar remaining after fermentation stops, it's rare to find wines with less than 1 gram/liter and wines with greater than 45 grams/liter are considered sweet  
+* **Density:** The density of water is close to that of water depending on the percent alcohol and sugar content  
+
+Since these three variables related to each other as part of the wine-making process, it makes sense that we have high correlations between them.
+<br>  
+
+### Investigating correlation between variables and the rated quality  
+I ran a correlation test between each one of the variables and found that the Alcohol, Chlorides and Density variables had the strongest correlations, either positive or negative, to the quality rating the sample received from the tasters. Having said that, the correlation of all three variables to the quality rating is weak to moderate at best. Nevertheless, we will concentrate on these two variables since the other variable had very weak correlation coefficients.
+<br>
+
+```{r}
+plot1 <- ggplot(aes(x = quality, y = alcohol), data = wqw) +
+  geom_point(color = '#1A5276', alpha = 1/5, position = 'jitter') +
+  stat_smooth(method = 'lm', color = '#943126') +
+  scale_y_continuous(lim = c(quantile(wqw$alcohol, 0.01), 
+                             quantile(wqw$alcohol, 0.99))) +
+  labs(x = "Quality", y = "% Alcohol", 
+       title = "Corrolation Between Alcohol and Quality (r = 0.436)")
+
+plot1
+
+cor.test(wqw$quality, wqw$alcohol)
+```
+
+```{r}
+ggplot(aes(x = quality, y = density), data = wqw) +
+  geom_point(color = '#1A5276', alpha = 1/5, position = 'jitter') +
+  stat_smooth(method = 'lm', color = '#943126') +
+  scale_y_continuous(lim = c(quantile(wqw$density, 0.01), 
+                             quantile(wqw$density, 0.99))) + 
+  labs(x = "Quality", y = "Density", 
+       title = "Corrolation Between Density and Quality (r = -0.307)")
+
+cor.test(wqw$quality, wqw$density)
+```
+
+```{r}
+ggplot(aes(x = quality, y = chlorides), data = wqw) +
+  geom_point(color = '#1A5276', alpha = 1/5, position = 'jitter') +
+  stat_smooth(method = 'lm', color = '#943126') +
+  scale_y_continuous(lim = c(quantile(wqw$chlorides, 0.05), 
+                             quantile(wqw$chlorides, 0.95))) +
+  labs(x = "Quality", y = "Chlorides", 
+       title = "Corrolation Between Chlorides and Quality (r = -0.210)")
+
+cor.test(wqw$quality, wqw$chlorides)
+```
+
+<br>
+
+**In contrast,** the remaining variables showed very week to non-existent correlation coefficients.  
+<br>  
+
+```{r}
+acid1 <- ggplot(aes(x = quality, y = fixed.acidity), data = wqw) +
+  geom_point(color = '#F79420', alpha = 1/5, position = 'jitter') +
+  stat_smooth(method = 'lm', color = '#000000') +
+  scale_y_continuous(lim = c(quantile(wqw$fixed.acidity, 0.01),
+                             quantile(wqw$fixed.acidity, 0.99)))
+
+acid2 <- ggplot(aes(x = quality, y = volatile.acidity), data = wqw) +
+  geom_point(color = '#F79420', alpha = 1/5, position = 'jitter') +
+  stat_smooth(method = 'lm', color = '#000000') +
+  scale_y_continuous(lim = c(quantile(wqw$volatile.acidity, 0.01),
+                             quantile(wqw$volatile.acidity, 0.99)))
+
+ grid.arrange(acid1, acid2, ncol=1)
+```
+
+```{r}
+acid3 <- ggplot(aes(x = quality, y = pH), data = wqw) +
+  geom_point(color = '#F79420', alpha = 1/5, position = 'jitter') +
+  stat_smooth(method = 'lm', color = '#000000') +
+  scale_y_continuous(lim = c(quantile(wqw$pH, 0.01), 
+                             quantile(wqw$pH, 0.99)))
+
+sulfur1 <- ggplot(aes(x = quality, y = free.sulfur.dioxide), data = wqw) +
+  geom_point(color = '#5760AB', alpha = 1/5, position = 'jitter') +
+  stat_smooth(method = 'lm', color = '#000000') +
+  scale_y_continuous(lim = c(quantile(wqw$free.sulfur.dioxide, 0.01), 
+                             quantile(wqw$free.sulfur.dioxide, 0.99)))
+
+grid.arrange(acid3, sulfur1, ncol=1)
+```
+
+```{r}
+sulfur2 <- ggplot(aes(x = quality, y = total.sulfur.dioxide), data = wqw) +
+  geom_point(color = '#5760AB', alpha = 1/5, position = 'jitter') +
+  stat_smooth(method = 'lm', color = '#000000') +
+  scale_y_continuous(lim = c(quantile(wqw$total.sulfur.dioxide, 0.01), 
+                             quantile(wqw$total.sulfur.dioxide, 0.99)))
+
+sulfur3 <- ggplot(aes(x = quality, y = sulphates), data = wqw) +
+  geom_point(color = '#5760AB', alpha = 1/5, position = 'jitter') +
+  stat_smooth(method = 'lm', color = '#000000') +
+  scale_y_continuous(lim = c(quantile(wqw$sulphates, 0.01), 
+                             quantile(wqw$sulphates, 0.99)))
+
+grid.arrange(sulfur2, sulfur3, ncol=1)
+```
+
+```{r}
+random1 <- ggplot(aes(x = quality, y = residual.sugar), data = wqw) +
+  geom_point(color = '#28B463', alpha = 1/5, position = 'jitter') +
+  stat_smooth(method = 'lm', color = '#000000') +
+  scale_y_continuous(lim = c(quantile(wqw$residual.sugar, 0.01), 
+                             quantile(wqw$residual.sugar, 0.99)))
+
+random2 <- ggplot(aes(x = quality, y = citric.acid), data = wqw) +
+  geom_point(color = '#28B463', alpha = 1/5, position = 'jitter') +
+  stat_smooth(method = 'lm', color = '#000000') +
+  scale_y_continuous(lim = c(quantile(wqw$citric.acid, 0.01), 
+                             quantile(wqw$citric.acid, 0.99)))
+
+grid.arrange(random1, random2, ncol=1)
+```
+
+# Multivariate Plots and Analysis
+<br>  
+
+### Lets start by looking at the summary data  
+The table below shows the mean of a three main variables grouped by the quality rating (Chlorides, Alcohol and  Density)
+<br>  
+
+```{r Multivariate_Plots}
+
+wqw.by_quality <- wqw %>%
+  group_by(quality) %>%
+  summarise(mean_chlorides = mean(chlorides),
+            mean_density = mean(density),
+            mean_alcohol = mean(alcohol),
+            n = n()) %>%
+  ungroup() %>%
+  arrange(quality)
+
+wqw.by_quality
+
+```
+<br>
+
+### Next, lets look at the relationship between the three variables with the strongest relationship (Alcohol, Chlorides and Density) and quality  
+<br>
+
+```{r ratios}
+
+ggplot(wqw, aes(density, chlorides, color=factor(quality)))+
+  geom_point(size = 4, alpha = 1/2, position = 'jitter') +
+  scale_color_brewer(palette ="Blues") +
+  # scale_x_continuous(lim = c(0.987,1.0005)) +
+  # scale_y_continuous(lim = c(0,22)) +
+  scale_x_continuous(lim = c(quantile(wqw$density, 0.01), 
+                             quantile(wqw$density, 0.99))) +
+  scale_y_continuous(lim = c(quantile(wqw$chlorides, 0.01), 
+                             quantile(wqw$chlorides, 0.99))) +
+  labs(x = "Density", y = "Chlorides",
+       title = "Relationship Between Density, Chlorides and Quality")
+```
+
+```{r}
+plot2 <- ggplot(wqw, aes(alcohol, density, color=factor(quality)))+
+  geom_point(size = 4, alpha = 1/2, position = 'jitter') +
+  scale_color_brewer(palette ="Purples") +
+  scale_y_continuous(lim = c(quantile(wqw$density, 0.01), 
+                             quantile(wqw$density, 0.99))) +
+  labs(x = "% Alcohol", y = "Density",
+       title = "Relationship Between Density, Alcohol and Quality")
+
+plot2
+```
+
+```{r}
+ggplot(wqw, aes(alcohol, chlorides, color=factor(quality))) +
+  geom_point(size = 4, alpha = 1/2, position = 'jitter') + 
+  scale_color_brewer(palette ="Greens") +
+  #scale_x_continuous(lim = c(6,16)) +
+  #scale_y_continuous(lim = c(0,22)) +
+  scale_y_continuous(lim = c(quantile(wqw$chlorides, 0.01), 
+                             quantile(wqw$chlorides, 0.99))) +
+  labs(x = "% Alcohol", y = "Chlorides",
+       title = "Relationship Between Alcohol, Chlorides and Quality")
+```
+<br>  
+
+
+### Prediction modeling of Quality based on Chlorides, Alcohol and Density  
+We will start by using the three main variables we identified as the one's with the most significant correlation. The purpose of this model is to decide if we can determine what quality rating a particular sample is likely to get based on these three variables (Chlorides, Density and Alcohol).
+<br>  
+
+```{r modeling}
+model1 <- lm(quality ~ chlorides, data = wqw)
+model2 <- update(model1, ~ . + alcohol)
+model3 <- update(model2, ~ . + density)
+mtable(model1, model2, model3, sdigits = 3)
+
+test_wine = data.frame(chlorides = 0.045, alcohol = 8.8, density = 1.0010)
+modelEstimate = predict(model3, newdata = test_wine, 
+                        interval="prediction", level = .95)
+
+modelEstimate
+
+res_data = data.frame(model3$model, model3$residuals) 
+with(res_data, sd(model3.residuals)) 
+
+res_data$resid <- as.numeric(res_data$model3.residuals)
+
+plot3 <- ggplot(aes(y = resid, x = quality), data = res_data) + 
+  geom_line(stat = "summary", fun.y = sd) +
+  labs(x = "Quality", y = "Residual Value",
+       title = "Prediction Model Based on Alcohol, Chlorides and Density")
+
+plot3
+```
+<br>  
+Interestingly enough, based on the sample data we have and the limited amount of variables, it seems that you might be able to "predict" how a taster might rate a particular sample. Since we are only using 3 out of 11 variables, this might be risky.
+<br>  
+
+### How will our model change if we add all the other variables as well? 
+<br>  
+
+```{r all_inclusive_modelling}
+model4 <- update(model3, ~ . + fixed.acidity)
+model5 <- update(model4, ~ . + volatile.acidity)
+model6 <- update(model5, ~ . + citric.acid)
+model7 <- update(model6, ~ . + residual.sugar)
+model8 <- update(model7, ~ . + free.sulfur.dioxide)
+model9 <- update(model8, ~ . + total.sulfur.dioxide)
+model10 <- update(model9, ~ . + pH)
+model11 <- update(model10, ~ . + sulphates)
+mtable(model1, model2, model3, model4, model5, model6, 
+       model7, model8, model9, model10, model11, sdigits = 3)
+
+test_wine_all = data.frame(residual.sugar = 20.70, 
+                           alcohol = 8.8, 
+                           density = 1.0010,
+                           fixed.acidity = 7.0,
+                           volatile.acidity = 0.27,
+                           citric.acid = 0.36,
+                           chlorides = 0.045,
+                           free.sulfur.dioxide = 45,
+                           total.sulfur.dioxide = 170,
+                           pH = 3.00,
+                           sulphates = 0.45)
+modelEstimate_all = predict(model11, newdata = test_wine_all, 
+                            interval="prediction", level = .95)
+
+
+modelEstimate_all
+
+
+res_data_all = data.frame(model11$model, model11$residuals) 
+with(res_data_all, sd(model11.residuals)) 
+
+res_data_all$resid <- as.numeric(res_data_all$model11.residuals)
+
+ggplot(aes(y = resid, x = quality), data = res_data_all) + 
+  geom_line(stat = "summary", fun.y = sd) +
+  labs(x = "Quality", y = "Residual Value",
+       title = "Prediction Model Based on All Variables")
+```
+<br>  
+Since the remaining 8 variables had almost no coloration to the rating, our best fit value changed very little. If anything, looking at the plot above, it seems that including the other variables introduced some outlier data points that are skewing our numbers.
+<br>  
+<br>  
+
+------
+
+# Final Plots and Summary
+<br>  
+
+### Plot One
+```{r}
+plot1
+```
+<br>  
+
+The first plot above shows to overall correlation between alcohol contents and quality ratings. I chose to focus on the alcohol contents because I was very surprised to see this come up. I'm not familiar with the ins and outs of wine tasting, but I never thought the alcohol contents will make a difference on the tasting. Or maybe this is just a bias we have in our data set?  
+<br>  
+<br>  
+
+### Plot Two
+```{r echo=FALSE, Plot_Two}
+plot2
+```
+<br>  
+
+The second plot Shows the multi-variant relationship between Alcohol, Density and Quality. The colors of the plot seem to darken as the density decreases and alcohol content increases, which indicates an increase in the quality rating of these samples. This supports our findings that Alcohol has a positive relationship with the quality rating and that Density has a negative relationship with Quality. It also supports the strong negative relationship we found between Alcohol contents and Density (r = -0.780).
+<br>  
+<br>  
+
+### Plot Three
+```{r echo=FALSE, Plot_Three}
+plot3
+```
+<br>  
+
+The third plot displays the residual value of each data point in our data set compared to our model. Using Alcohol, Density and Chloride variables it looks like we came up with a solid model that we may be able to use to predict the rating a particular sample might get from a taster. This makes sense since we developed the model against the exact same data set we used for testing, but unfortunately I have no way to reproduce the testing with a minimum of 3 reviewers while capturing the variables of the samples they are rating.  
+<br>  
+<br>  
+
+------
+
+# Reflection  
+The main thing I took away from this project is that even though we have a working model we have no way to truly verify if it is correct because of lack of additional data not included in the data set we used for our prediction model. It would be interesting to try and take a subsection of the same data set of 4000 data points and then run evaluate the correctness of the remaining 898 samples not included in the creating of the model.  
+
+In addition, I'm not familiar with the process of making wine, but I would think that the variables captured are the result of the process used to make the wine and not the other way around. It might not be possible to accurately control these variables and "optimize" the process to make a better tasting wine.  
+
+Lastly, I would definitely **not** drink other liquids expecting a pleasant experience just because they happen to have optimal Alcohol, Residual Sugar and Density values. There are probably quite a lot of liquids out there that would not only taste horrible but are probably bad for your health as well that would score quite high based on our prediction model.
+<br>  
+<br>  
+
+------  
+
+### Citation  
+P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis.  
+**Modeling wine preferences by data mining from physicochemical properties.**  
+In Decision Support Systems, Elsevier, 47(4):547-553. ISSN: 0167-9236.
+
+**available at:**  
+[@Elsevier] http://dx.doi.org/10.1016/j.dss.2009.05.016  
+[Pre-press (pdf)] http://www3.dsi.uminho.pt/pcortez/winequality09.pdf  
+[bib] http://www3.dsi.uminho.pt/pcortez/dss09.bib  
