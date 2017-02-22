@@ -1,0 +1,29 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link href="titanic.css" rel="stylesheet" />
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="http://dimplejs.org/dist/dimple.v2.3.0.min.js"></script>
+    <script src="titanic.js"></script>
+  </head>
+  <body>
+  <div class="center">
+    <div style="left: 20px; top: 10px;">
+      <h2>Passengers Survival by Attribute Grouping and Ticket Class - Titanic Dataset</h2>
+      <h4>RMS Titanic was a British passenger liner that sank in the North Atlantic Ocean in the early morning of 15 April 1912, after colliding with an iceberg during her maiden voyage from Southampton to New York City. Of the 2,224 passengers and crew aboard, more than 1,500 died, making it one of the deadliest commercial peacetime maritime disasters in modern history. (source: <a href="https://en.wikipedia.org/wiki/RMS_Titanic" target="_blank">Wikipedia</a>)</h4>
+      <p>The chart below is based on the cleanup and analysis of the Titanic Dataset performed for <a href="https://github.com/geektb/UdacityDAND/blob/master/P2%20Project%20-%20Titanic.ipynb" target="_blank">Project 2</a> of Udacity's "Introduction to Data Science" course, and evaluates the survival rate of passengers based on their attributes. Passengers were divided into eight distinct groups based on their age, and whether they were traveling alone or with other family members. In addition, each one of the groups was further divided by the passenger’s ticket class. <font color="red"><strong>The left side</strong></font> of the chart displays a count of passengers that did not survive based on their groups. <font color="green"><strong>The right side</strong></font> shows the count of passengers that did survive.</p>
+      <label><input type="checkbox" id="chkTicketClass"> Combine ticket class data per group</label><br>
+    </div>
+    <div>
+      <div id="chartBackground">
+      <svg class="chartBackground" style="position: absolute; left: 0px; top: 0px;" width="1000" height="600"></svg>
+      <svg class="chartContainer"  style="position: absolute; left: 0px; top: 0px;" width="1000" height="600"></svg>
+       <script>
+        // load first dataset
+        loadData();
+      </script>
+      </div>
+    </div>
+    </div>
+  </body>
+</html>
