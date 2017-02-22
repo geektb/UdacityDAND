@@ -1,1 +1,1 @@
-# UdacityDAND
+# Udacity Data Analyst Nanodegree Projects
